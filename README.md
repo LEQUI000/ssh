@@ -12,7 +12,7 @@ curl -fsSL https://ssh.qui.icu/import | sh
 
 The script asks for an sshid.io username, lists that user's keys with numbers, and lets you pick which ones to import. It shows exactly which file it will change and asks before writing anything.
 
-**Qui's keys only (non-interactive):**
+**All of Qui's keys, every type (non-interactive):**
 
 ```sh
 curl -fsSL https://ssh.qui.icu/keys | sh
@@ -31,7 +31,8 @@ curl -fsSL https://ssh.qui.icu/import | sh -s -- [-a] [-t TYPES] [-n NUMS] [-y] 
 | Option | What it does |
 |---|---|
 | `USERNAME` | sshid.io username. If left out, you'll be prompted. |
-| `-a` | Import all keys and skip the selection prompt. |
+| *(none)* | With no `-a`, `-t` or `-n`, the default is **`ed25519,ecdsa,sk`**. That's ED25519, ECDSA, and hardware security keys/passkeys (`sk-ecdsa`, `sk-ed25519`). Only RSA is left out. |
+| `-a` | Import all keys, including RSA, and skip the selection prompt. |
 | `-t TYPES` | Import only these key types, comma-separated: `ed25519`, `ecdsa`, `rsa`, `sk` (all hardware keys), `sk-ed25519`, `sk-ecdsa`. |
 | `-n NUMS` | Import only these keys by their number in the list, e.g. `1,3,5`. |
 | `-y` | Don't ask for confirmation. |
@@ -39,7 +40,7 @@ curl -fsSL https://ssh.qui.icu/import | sh -s -- [-a] [-t TYPES] [-n NUMS] [-y] 
 
 You can combine `-t` and `-n`. A key is imported if it matches either one.
 
-At the interactive selection prompt, you can press **Enter** for all keys, type numbers (`1 3`), or type key types (`ed25519,sk`).
+At the interactive selection prompt, you can press **Enter** for the default (`ed25519,ecdsa,sk`), type `all`, type numbers (`1 3`), or type key types (`ed25519,sk`).
 
 ## Examples
 
@@ -59,7 +60,7 @@ curl -fsSL https://ssh.qui.icu/import | sudo sh -s -- -a qui-le
 
 ## Running it on a schedule
 
-With no terminal attached (cron, Ansible, cloud-init), the script never prompts. Pass the username, and add `-a` or `-t`/`-n` if needed. It imports all keys by default.
+With no terminal attached (cron, Ansible, cloud-init), the script never prompts. Pass the username, and add `-a` or `-t`/`-n` if needed. Without those, it imports the default `ed25519,ecdsa,sk` keys (everything except RSA).
 
 ```sh
 # crontab -e   (daily at 3:17am)
