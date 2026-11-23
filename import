@@ -1,0 +1,15 @@
+#!/bin/sh
+# Self-service sshid.io key importer -> running user's authorized_keys (deduped).
+#   curl -fsSL https://ssh.qui.icu/import | sh                 # asks for a username
+#   curl -fsSL https://ssh.qui.icu/import | sh -s -- <name>    # skips the name prompt
+T=/dev/tty; tty_ok() { { : <$T; } 2>/dev/null; }; ask() { printf '%s' "$1" >$T; read -r R <$T; }
+U="${1:-$SSHID_USER}"
+[ -z "$U" ] && { tty_ok || { echo "no terminal: use  sh -s -- <name>" >&2; exit 2; }; ask "sshid.io username: "; U=$R; }
+case "$U" in ""|.*|*[!A-Za-z0-9._-]*) echo "invalid username '$U'" >&2; exit 2;; esac
+H=$(getent passwd "$(id -un)" | cut -d: -f6); AK="$H/.ssh/authorized_keys"
+K=$(curl -fsS --max-time 15 "https://sshid.io/$U" | grep -E '^(ssh-|ecdsa-|sk-)') || { echo "no keys found for '$U'" >&2; exit 1; }
+echo "Keys for $U:"; { echo "$K" | ssh-keygen -lf - 2>/dev/null || echo "$K" | awk '{print $1, $NF}'; } | sed 's/^/  /'
+if tty_ok && [ -z "$SSHID_YES" ]; then ask "Add to $AK (user $(id -un))? [y/N] "; case "$R" in [yY]*) ;; *) echo "aborted, nothing changed"; exit 0;; esac; fi
+mkdir -p "$H/.ssh" && chmod 700 "$H/.ssh"; F=$(mktemp)
+cp -p "$AK" "$AK.bak" 2>/dev/null; { cat "$AK" 2>/dev/null; echo "$K"; } | awk 'NF && !s[$2]++' > "$F" && cat "$F" > "$AK"; chmod 600 "$AK"; rm -f "$F"
+echo "done: $(grep -c . "$AK") keys in $AK (backup: $AK.bak)"
