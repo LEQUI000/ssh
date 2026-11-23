@@ -5,13 +5,14 @@ T=/dev/tty; tty_ok() { ( : <$T ) 2>/dev/null; }; ask() { printf '%s' "$1" >$T; r
 die() { echo "import: $*" >&2; exit 2; }
 usage() { cat >&2 <<'U'
 usage: curl -fsSL https://ssh.qui.icu/import | sh -s -- [-a] [-t TYPES] [-n NUMS] [-y] [USERNAME]
-  -a        import all keys (skip the selection prompt)
+  -a        import all keys, including rsa and sk (skip the selection prompt)
+            default with no -a/-t/-n: ed25519,ecdsa
   -t TYPES  only these types, comma-separated: ed25519 ecdsa rsa sk sk-ed25519 sk-ecdsa
   -n NUMS   only these key numbers as listed, e.g. 1,3,5
   -y        don't ask for confirmation
 U
 exit 2; }
-SEL=; Y=$SSHID_YES
+DEF="ed25519,ecdsa"; SEL=; Y=$SSHID_YES   # DEF = what Enter / no selection imports
 while getopts at:n:yh o; do case $o in a) SEL=all;; t|n) SEL="$SEL,$OPTARG";; y) Y=1;; *) usage;; esac; done
 shift $((OPTIND-1)); U="${1:-$SSHID_USER}"
 
@@ -29,7 +30,7 @@ echo "$K" | while read -r l; do i=$((i+1))
   printf '  %2d) %s\n' "$i" "$f"; done
 
 # 3. Choose: all, by number, or by type
-pick() { case "$1" in ""|,) echo "$K"; return;; esac
+pick() {
   echo "$K" | awk -v s="$1" 'BEGIN{ n=split(s,a,/[ ,]+/)
       for(i=1;i<=n;i++){ x=a[i]; if(x=="") continue
         if(x=="a"||x=="all") all=1
@@ -44,7 +45,8 @@ pick() { case "$1" in ""|,) echo "$K"; return;; esac
       if(("sk-ed25519" in typ) && t~/^sk-ssh-ed25519/) m=1
       if(("sk-ecdsa" in typ) && t~/^sk-ecdsa/) m=1
       if(m) print }'; }
-[ -z "$SEL" ] && tty_ok && { ask "Import which? [Enter=all | numbers: 1 3 | types: ed25519,ecdsa,rsa,sk] "; SEL=$R; }
+[ -z "$SEL" ] && tty_ok && { ask "Import which? [Enter=$DEF | all | numbers: 1 3 | types: ed25519,ecdsa,rsa,sk] "; SEL=$R; }
+[ -z "${SEL#,}" ] && SEL=$DEF
 S=$(pick "$SEL") || exit 2; [ -n "$S" ] || die "no keys matched '${SEL#,}'"
 
 # 4. Confirm, then merge + dedupe
