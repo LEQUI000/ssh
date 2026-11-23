@@ -1,0 +1,7 @@
+#!/bin/sh
+# Merge keys from sshid.io into the running user's authorized_keys, deduped.
+H=$(getent passwd "$(id -un)" | cut -d: -f6); AK="$H/.ssh/authorized_keys"
+K=$(curl -fsS --max-time 15 https://sshid.io/qui-le | grep -E '^(ssh-|ecdsa-|sk-)') || { echo "sshid: fetch failed" >&2; exit 1; }
+mkdir -p "$H/.ssh" && chmod 700 "$H/.ssh"; T=$(mktemp)
+cp -p "$AK" "$AK.bak" 2>/dev/null; { cat "$AK" 2>/dev/null; echo "$K"; } | awk 'NF && !s[$2]++' > "$T" && cat "$T" > "$AK"; chmod 600 "$AK"; rm -f "$T"
+echo "sshid: $(grep -c . "$AK") keys in $AK"
