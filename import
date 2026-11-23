@@ -20,7 +20,9 @@ shift $((OPTIND-1)); U="${1:-$SSHID_USER}"
 case "$U" in ""|.*|*[!A-Za-z0-9._-]*) die "invalid username '$U'";; esac
 
 # 2. Fetch and list
-K=$(curl -fsS --max-time 15 "https://sshid.io/$U" | grep -E '^(ssh-|ecdsa-|sk-)') || die "no keys found for '$U'"
+# sshid.io splits keys by type, so pull every endpoint and dedupe
+K=$(for e in "" /ECDSA-SK /ED25519 /ECDSA /RSA; do curl -fsS --max-time 15 "https://sshid.io/$U$e"; echo; done 2>/dev/null \
+  | grep -E '^(ssh-|ecdsa-|sk-)' | awk '!s[$2]++'); [ -n "$K" ] || die "no keys found for '$U'"
 echo "Keys for $U:"; i=0
 echo "$K" | while read -r l; do i=$((i+1))
   f=$(echo "$l" | ssh-keygen -lf - 2>/dev/null) || f=$(echo "$l" | awk '{print $1, $NF}')
