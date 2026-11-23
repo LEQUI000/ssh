@@ -68,7 +68,7 @@ With no terminal attached (cron, Ansible, cloud-init), the script never prompts.
 
 ## What it does
 
-1. Fetches `https://sshid.io/USERNAME` and keeps only valid key lines (`ssh-`, `ecdsa-`, `sk-`).
+1. Fetches every sshid.io key list for the user: `https://sshid.io/USERNAME` plus `/ECDSA-SK`, `/ED25519`, `/ECDSA` and `/RSA`. It keeps only valid key lines (`ssh-`, `ecdsa-`, `sk-`) and drops duplicates. A type the user doesn't have is skipped.
 2. Shows the keys with fingerprints so you can choose.
 3. Copies your current file to `~/.ssh/authorized_keys.bak`.
 4. Merges the chosen keys into `~/.ssh/authorized_keys`, removing duplicates by key value. Your existing keys and comments are kept.
